@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="getEmployee" doc:id="c1d12440-ce03-4e81-9c3e-718957c70ca0" >
+		<set-variable value="#[message.attributes.queryParams.department default '']" doc:name="department" doc:id="23b9c795-cb79-4935-bbf9-a695180a1b4f" variableName="dept"/>
+		<choice doc:name="Choice" doc:id="53cd3439-66f3-48f1-8b45-0ca809d48558" >
+			<when expression="#[isEmpty(vars.dept)]">
+				<db:select doc:name="allemp" doc:id="87130e8a-b5b4-495f-9cca-b1294081dfde" config-ref="Database_Config">
+					<db:sql ><![CDATA[select * from emp]]></db:sql>
+				</db:select>
+			</when>
+			<otherwise >
+				<db:select doc:name="emp" doc:id="1df43f4e-ba5c-4bf6-a67d-ca4e7fed399b" config-ref="Database_Config">
+			<db:sql><![CDATA[select * from emp
+where department=:dept]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	dept:message.attributes.queryParams.'department'
+}]]]></db:input-parameters>
+		</db:select>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="7b6adaf6-8082-4be2-8e75-bf18a67457f9" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="c83c8157-dd6d-4a51-9da6-e25dbcf749e7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="getEmployeeByID" doc:id="cc4ae0a9-77f1-47a0-af45-ed44983dfd28">
+		<db:select doc:name="emp" doc:id="33f21042-8395-4ab4-8620-ce39b9e7c47a" config-ref="Database_Config">
+			<db:sql><![CDATA[select * from emp
+where ID=:id]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	id:message.attributes.uriParams.'ID'
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="6b368a20-01a9-4e1d-9d9f-85bbac640887">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+import * from dw::Runtime
+---
+if (isEmpty(payload)) 
+	fail('Data was empty') 
+else payload
+	]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="0e64401b-3087-4c8b-b627-97892823d2dd" />
+		<error-handler>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="549527e0-a0b5-4fa6-ab4a-d5b6abb69b40" type="EXPRESSION">
+				<set-payload value="Data Not Exist" doc:name="Set Payload" doc:id="59d5de92-8a8a-470c-8ecf-7d345dc090ec" />
+			</on-error-continue>
+		</error-handler>
+	</flow>
+	<flow name="postEmployee" doc:id="393dd233-fcb2-4500-a099-3dd3faeff218" >
+		<logger level="INFO" doc:name="Logger" doc:id="ca303a4e-8927-4abd-82b2-bab8258fa8c7" message="#[payload]"/>
+		<db:insert doc:name="Insert" doc:id="a8740b1c-09be-4c5c-93c2-6df8093e141e" autoGenerateKeys="true" config-ref="Database_Config">
+			<db:sql ><![CDATA[insert into emp(name, department, city, postalCode) values (:name, :department, :city, :postalCode)
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	name:payload.name, department: payload.department, city: payload.city, postalCode:payload.postalCode
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="2c50808d-4674-4277-86c6-87410f5c0d8e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "Data insert Successful"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="fa199d4d-dfe5-49c1-bbbe-3540fa7494d2" message="#[payload]"/>
+	</flow>
+	<flow name="updateEmployee" doc:id="2455b1ff-ce99-43fb-9745-c244bbea7569" >
+		<logger level="INFO" doc:name="Logger" doc:id="35f8ec14-9079-471d-b1ed-824f07a773f5" />
+		<db:update doc:name="Update" doc:id="6ebeb719-25fb-4c32-be71-d38005025685" config-ref="Database_Config">
+			<db:sql ><![CDATA[UPDATE emp SET name =:name, department =:department, city =:city, postalCode =:postalCode
+WHERE ID =:id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id:message.attributes.uriParams."ID", name:payload.name, department: payload.department, city: payload.city, postalCode:payload.postalCode
+}]]]></db:input-parameters>
+		</db:update>
+		<logger level="INFO" doc:name="Logger" doc:id="2ad9face-5759-4a32-a360-d67cf218ae37" message="#[payload]"/>
+	</flow>
+	<flow name="deleteEmployee" doc:id="df937246-41c5-4582-8f0b-049c78c05fe7" >
+		<db:delete doc:name="Delete" doc:id="a18d626b-4ccf-4395-b83b-0de50969b9e3" config-ref="Database_Config">
+			<db:sql ><![CDATA[DELETE FROM emp
+WHERE ID =:id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id:message.attributes.uriParams."ID"
+}]]]></db:input-parameters>
+		</db:delete>
+		<logger level="INFO" doc:name="Logger" doc:id="bc728345-1cee-4dc8-a51e-8c8a63c47c5d" message="#[payload]"/>
+	</flow>
+</mule>

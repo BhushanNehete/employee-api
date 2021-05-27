@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="emp_json" format="json">
+      <types:shape format="weave" example="examples/emp_json.json"><![CDATA[%dw 2.0
+
+type emp_json = {|
+  ID: Number {"typeId": "int"}, 
+  name: String, 
+  department: String, 
+  city: String, 
+  postalCode: String
+|} {"example": "{\\\"ID\\\":6,\\\"name\\\":\\\"Cody\\\",\\\"department\\\":\\\"ad\\\",\\\"city\\\":\\\"Paris\\\",\\\"postalCode\\\":\\\"Quis\\\"}"}
+
+]]></types:shape>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#c83c8157-dd6d-4a51-9da6-e25dbcf749e7"/>
+</types:mule>
